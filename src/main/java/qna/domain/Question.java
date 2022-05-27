@@ -97,25 +97,38 @@ public class Question extends BaseTimeEntity {
             '}';
     }
 
-    public void delete(User user) {
+    public List<DeleteHistory> delete(User user) {
         if (!this.isOwner(user)) {
             throw new CannotDeleteException("질문을 삭제할 권한이 없습니다.");
         }
-        checkAnswersIsMine();
-        this.deleted = true;
-        setAnswersDelete();
+        List<DeleteHistory> deleteHistories = new LinkedList<>();
+        try{
+            this.deleted = true;
+            deleteHistories.add(makeDeleteHistory());
+            deleteAnswer(deleteHistories);
+        }catch(CannotDeleteException e){
+            rollbackDelete(deleteHistories);
+            throw new CannotDeleteException(e.getMessage());
+        }
+        return deleteHistories;
     }
 
-    private void setAnswersDelete() {
+    private void rollbackDelete(List<DeleteHistory> deleteHistories) {
+        this.deleted = false;
+        List<Long> answerIds = deleteHistories.stream()
+            .filter(deleteHistory -> deleteHistory.getContentType() == ContentType.ANSWER)
+            .map(DeleteHistory::getId)
+            .collect(Collectors.toList());
         for (Answer answer : answers) {
-            answer.delete();
+            if (answerIds.contains(answer.getId())) {
+                answer.rollbackDelete();
+            }
         }
     }
 
-
-    private void checkAnswersIsMine() {
+    private void deleteAnswer(List<DeleteHistory> deleteHistories) {
         for (Answer answer : answers) {
-            answer.isOwner(this.writer);
+            deleteHistories.add(answer.delete(this.writer));
         }
     }
 

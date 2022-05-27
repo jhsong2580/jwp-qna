@@ -44,8 +44,8 @@ public class QnaService {
         Question question = questionRepository.findByIdAndDeletedIsFalse(
             questionId).orElseThrow(NotFoundException::new);
 
-        question.delete(loginUser);
-        List<DeleteHistory> deleteHistories = getDeleteHistories(question);
+
+        List<DeleteHistory> deleteHistories = question.delete(loginUser);
         deleteHistoryService.saveAll(deleteHistories);
 
         answerRepository.updateDeleteOfAnswers(
@@ -56,14 +56,4 @@ public class QnaService {
 
     }
 
-    private List<DeleteHistory> getDeleteHistories(Question question) {
-        List<DeleteHistory> deleteHistories = new LinkedList<>();
-        deleteHistories.add(question.makeDeleteHistory());
-        deleteHistories.addAll(
-            question.getAnswers().stream()
-                .map(Answer::makeDeleteHistory)
-                .collect(Collectors.toList())
-        );
-        return deleteHistories;
-    }
 }

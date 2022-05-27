@@ -61,10 +61,8 @@ public class Answer extends BaseTimeEntity {
         moveAnswer();
     }
 
-    public void isOwner(User writer) {
-        if (this.writer != writer) {
-            throw new CannotDeleteException("다른 사람이 쓴 답변이 있어 삭제할 수 없습니다.");
-        }
+    public boolean isOwner(User writer) {
+        return this.writer == writer;
     }
 
     public void toQuestion(Question question) {
@@ -83,10 +81,16 @@ public class Answer extends BaseTimeEntity {
         this.question.getAnswers().remove(this);
     }
 
-    public void delete() {
+    public DeleteHistory delete(User writer) {
+        if(!isOwner(writer)){
+            throw new CannotDeleteException("다른 사람이 쓴 답변이 있어 삭제할 수 없습니다.");
+        }
         this.deleted = true;
+        return makeDeleteHistory();
     }
-
+    public void rollbackDelete(){
+        this.deleted = false;
+    }
     public boolean isDeleted() {
         return deleted;
     }
